@@ -1,13 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main() {
-    printf("screamd: daemon to make pc scream when memory < 1024MiB\n");
+#define BUFSIZE 128
+#define MIN_THRESHOLD_MIB 1024
 
-    int status = system("aplay scream.wav");
-    if(status != 0){
-        exit(EXIT_FAILURE);
+int main(void) {
+  char *mem_info_cmd = "free -m | grep 'Mem:' | awk '{print $4}'";
+  int mem_avail = 0;
+
+  char mem_info_buf[BUFSIZE] = {0};
+  FILE *fp;
+
+  if ((fp = popen(mem_info_cmd, "r")) == NULL) {
+    printf("Error opening pipe!\n");
+    return EXIT_FAILURE;
+  }
+
+  while (fgets(mem_info_buf, BUFSIZE, fp) != NULL) {
+    mem_avail = atoi(mem_info_buf);
+    // NOTE: reverse comparison operator
+    if (mem_avail > MIN_THRESHOLD_MIB) {
+      system("aplay scream.wav");
     }
+  }
 
-    exit(EXIT_SUCCESS);
+  if (pclose(fp)) {
+    printf("Command not found or exited with error status\n");
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }
