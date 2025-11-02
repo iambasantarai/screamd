@@ -6,5 +6,7 @@ stopd:
 	kill $$(cat screamd.pid)
 clean:
 	rm screamd screamd.pid screamd.log
+logs:
+	tail -f screamd.log
 
-.PHONY= startd viewd stopd clean
+.PHONY= startd viewd stopd clean logs
