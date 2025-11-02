@@ -1,32 +1,44 @@
+#include <assert.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#define BUFSIZE 128
-#define MIN_THRESHOLD_MIB 1024
+#include <time.h>
+#include <unistd.h>
 
 int main(void) {
-  char *mem_info_cmd = "free -m | grep 'Mem:' | awk '{print $4}'";
-  int mem_avail = 0;
+  pid_t child_pid = fork();
+  assert(child_pid != -1);
+  if (child_pid > 0)
+    return EXIT_SUCCESS;
+  setsid();
+  child_pid = fork();
+  assert(child_pid != -1);
+  if (child_pid > 0)
+    return EXIT_SUCCESS;
 
-  char mem_info_buf[BUFSIZE] = {0};
-  FILE *fp;
+  pid_t pid = getpid();
+  int pid_fd = open("screamd.pid", O_CREAT | O_EXCL | O_WRONLY | O_TRUNC, 0644);
+  assert(pid_fd != -1);
+  FILE *pid_file = fdopen(pid_fd, "w");
+  assert(pid_file != NULL);
+  fprintf(pid_file, "%d", pid);
+  fclose(pid_file);
 
-  if ((fp = popen(mem_info_cmd, "r")) == NULL) {
-    printf("Error opening pipe!\n");
-    return EXIT_FAILURE;
-  }
+  const char *log_file_path = "screamd.log";
+  FILE *log_file = fopen(log_file_path, "a");
+  assert(log_file != NULL);
+  setlinebuf(log_file);
+  setlinebuf(stdin);
+  setlinebuf(stdout);
+  int log_fd = fileno(log_file);
+  dup2(log_fd, STDOUT_FILENO);
+  dup2(log_fd, STDERR_FILENO);
 
-  while (fgets(mem_info_buf, BUFSIZE, fp) != NULL) {
-    mem_avail = atoi(mem_info_buf);
-    // NOTE: reverse comparison operator
-    if (mem_avail > MIN_THRESHOLD_MIB) {
-      system("aplay scream.wav");
-    }
-  }
-
-  if (pclose(fp)) {
-    printf("Command not found or exited with error status\n");
-    return EXIT_FAILURE;
+  while (1) {
+    time_t now = time(NULL);
+    char *t = ctime(&now);
+    fputs(t, stdout);
+    sleep(1);
   }
 
   return EXIT_SUCCESS;
