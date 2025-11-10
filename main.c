@@ -20,20 +20,20 @@ int get_available_memory(void) {
     FILE *meminfo = fopen("/proc/meminfo", "r");
     if (meminfo == NULL) {
         printf("Error reading file.\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     char line[BUF_SIZE];
     while (fgets(line, sizeof(line), meminfo)) {
-        int ram;
-        if (sscanf(line, "MemAvailable: %d kB", &ram) == 1) {
+        int avail_mem;
+        if (sscanf(line, "MemAvailable: %d kB", &avail_mem) == 1) {
             fclose(meminfo);
-            return ram;
+            return avail_mem;
         }
     }
 
     fclose(meminfo);
-    return -1;
+    return EXIT_FAILURE;
 }
 
 int main(void) {
