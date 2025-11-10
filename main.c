@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define BUF_SIZE 128
+#define BUF_SIZE 256
 #define MIN_MEM_THRES_IN_MIB 1024
 
-void scream() {
+void scream(void) {
   char *cmd = "aplay -D sysdefault scream.wav";
 
   int result = system(cmd);
@@ -16,28 +16,24 @@ void scream() {
   }
 }
 
-int get_avail_memory() {
-  char *cmd = "free -m | grep 'Mem:' | awk '{print $4}'";
-  int avail_mem = 0;
+int get_available_memory(void) {
+    FILE *meminfo = fopen("/proc/meminfo", "r");
+    if (meminfo == NULL) {
+        printf("Error reading file.\n");
+        return -1;
+    }
 
-  char mem_info_buf[BUF_SIZE] = {0};
-  FILE *fp;
+    char line[BUF_SIZE];
+    while (fgets(line, sizeof(line), meminfo)) {
+        int ram;
+        if (sscanf(line, "MemAvailable: %d kB", &ram) == 1) {
+            fclose(meminfo);
+            return ram;
+        }
+    }
 
-  if ((fp = popen(cmd, "r")) == NULL) {
-    printf("Error opening pipe.\n");
-    return EXIT_FAILURE;
-  }
-
-  while (fgets(mem_info_buf, BUF_SIZE, fp) != NULL) {
-    avail_mem = atoi(mem_info_buf);
-  }
-
-  if (pclose(fp)) {
-    printf("Error closing pipe.");
-    return EXIT_FAILURE;
-  }
-
-  return avail_mem;
+    fclose(meminfo);
+    return -1;
 }
 
 int main(void) {
@@ -71,8 +67,10 @@ int main(void) {
 
   printf("Starting daemon...\n");
   while (1) {
-    int avail_mem = get_avail_memory();
-    if (avail_mem < MIN_MEM_THRES_IN_MIB) {
+    int avail_mem = get_available_memory();
+    int avail_mem_in_mib = avail_mem/1024;
+
+    if (avail_mem_in_mib < MIN_MEM_THRES_IN_MIB) {
       scream();
     }
 
