@@ -1,11 +1,11 @@
-startd: 
+startd: clean
 	gcc main.c -o screamd && ./screamd
 viewd:
 	ps aux | grep screamd
 stopd:
 	kill $$(cat screamd.pid)
 clean:
-	rm screamd screamd.pid screamd.log
+	rm -f screamd screamd.pid screamd.log
 logs:
 	tail -f screamd.log
 
